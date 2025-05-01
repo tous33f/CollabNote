@@ -1,0 +1,1 @@
+CollabNote is a real-time collaborative workspace designed to help teams and individuals work together seamlessly. Inspired by tools like Google Docs and Notion, it enhances workflow efficiency by offering a suite of powerful collaboration and productivity features.
