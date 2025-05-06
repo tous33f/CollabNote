@@ -1,29 +1,47 @@
+import axios from 'axios'
 import React, { useRef, useState, useEffect} from 'react'
-import { Link } from 'react-router'
+import { useDispatch, useSelector } from 'react-redux'
+import { Link, Outlet } from 'react-router'
+import { select } from '../features/workspaceSlice'
+import { toast } from 'react-toastify'
+import SidebarProject from './SidebarProject'
 
 export default function Sidebar() {
     const [openDropdown, setOpenDropdown] = useState(false)
     let dropdownRef=useRef(null)
 
-    const workspaces=[
-        "Acme Group","Kollege Inc","Terraprime ltd","Systems ltd","Folio3"
-    ]
-    const [workspace,setWorkspace]=useState(workspaces[0])
+    const dispatch=useDispatch()
+    let workspace=useSelector(state=>state.workspace?.workspace)
+
+    const [workspaces,setWorkspaces]=useState(null)
 
     useEffect(() => {
-        function handleClickOutside(event) {
-          if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-            setOpenDropdown(null)
-          }
+      function handleClickOutside(event) {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setOpenDropdown(null)
         }
-    
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => {
-          document.removeEventListener("mousedown", handleClickOutside)
-        }
+      }
+
+      document.addEventListener("mousedown", handleClickOutside)
+
+      axios.get("/api/w",{withCredentials: true})
+      .then( ({data})=>{
+        setWorkspaces(data?.data)
+        dispatch(select(data?.data[0]?.workspace))
+      } )
+      .catch( (err)=>{
+        const {response}=err
+        const {data}=response
+        const {message}=data
+        toast.error(message)
+      } )
+
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside)
+      }
       }, [])
 
-  return (
+  return (<>
     <div className="min-w-2/12 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4">
           <div className="flex items-center gap-2">
@@ -33,7 +51,7 @@ export default function Sidebar() {
                 <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="font-semibold text-gray-900">Logoipsum</span>
+            <span className="font-semibold text-gray-900">CollabNote</span>
           </div>
         </div>
 
@@ -45,7 +63,7 @@ export default function Sidebar() {
             <div className="flex mt-1 items-center px-3 py-1.5 mx-1 hover:bg-gray-100 rounded gap-2 cursor-pointer"
             onClick={()=>setOpenDropdown(prev=>!prev)} >
                 <div className="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">A</div>
-                <span className="text-sm">{workspace}</span>
+                <span className="text-sm">{workspace?.name}</span>
                 <svg
                     className={`ml-auto w-4 h-4 transition-transform ${openDropdown ? "rotate-180" : ""}`}
                     fill="none"
@@ -61,14 +79,14 @@ export default function Sidebar() {
                 <ul className="py-1">
                   {workspaces.map((wp) => (
                     <li
-                      key={wp}
+                      key={wp?.workspace?.id}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-700 text-sm"
                       onClick={() =>{
-                        setWorkspace(wp)
                         setOpenDropdown(null)
+                        dispatch(select(wp?.workspace))
                       }}
                     >
-                      {wp}
+                      {wp?.workspace?.name}
                     </li>
                   ))}
                 </ul>
@@ -108,29 +126,9 @@ export default function Sidebar() {
           </div> </Link>
         </nav>
 
-        <div className="mt-6">
-          <div className="px-4 flex justify-between items-center">
-            <span className="text-xs font-semibold text-gray-500">PROJECTS</span>
-            <button className="text-gray-500 hover:bg-gray-100 rounded w-5 h-5 flex items-center justify-center">+</button>
-          </div>
-          <div className="mt-1 px-1">
-            
-            <Link to={"/p"} >
-            <div className="flex items-center px-3 py-1.5 mx-1 hover:bg-gray-100 rounded gap-2 cursor-pointer">
-              <div className="w-6 h-6 rounded bg-purple-600 text-white flex items-center justify-center text-xs font-semibold">M</div>
-              <span className="text-sm">Mobile App Development</span>
-            </div>
-            </Link>
+        <SidebarProject workspace={workspace} />
 
-            <Link to={"/p"} >
-            <div className="flex items-center px-3 py-1.5 mx-1 hover:bg-gray-100 rounded gap-2 cursor-pointer">
-              <div className="w-6 h-6 rounded bg-indigo-900 text-white flex items-center justify-center text-xs font-semibold">W</div>
-              <span className="text-sm">Website Redesign</span>
-            </div>
-            </Link>
-
-          </div>
-        </div>
       </div>
-  )
+      <Outlet />
+      </>)
 }

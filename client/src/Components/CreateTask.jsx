@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Calendar, ChevronDown, X, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Calendar, ChevronDown, Check } from 'lucide-react';
+import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
 
-export default function CreateTask({isOpen,setIsOpen}) {
-    const task=(typeof Boolean==typeof isOpen)?null:isOpen
-    console.log(task)
-  const [taskName, setTaskName] = useState(task?.name ?? "");
-  const [selectedDate, setSelectedDate] = useState('');
+export default function CreateTask({setTasks,isOpen,setIsOpen}) {
+  const task=(typeof Boolean==typeof isOpen)?null:isOpen
+  console.log(task)
+  const [taskName, setTaskName] = useState(task?.title ?? "");
+  const [selectedDate, setSelectedDate] = useState( task?.due_date?(new Date(task?.due_date)).toLocaleDateString('en-US', {year: 'numeric',month: 'short',day: 'numeric'}) : "");
   const [showCalendar, setShowCalendar] = useState(false);
   
   // Dropdown states
@@ -13,14 +16,16 @@ export default function CreateTask({isOpen,setIsOpen}) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   
-  const [selectedAssignee, setSelectedAssignee] = useState(task?.assignee?.name ?? '');
+  const [selectedAssignee, setSelectedAssignee] = useState(task?.assignee  ?? '');
   const [selectedStatus, setSelectedStatus] = useState(task?.status ?? '');
-  const [selectedProject, setSelectedProject] = useState(task?.project?.name ?? '');
+  const [selectedProject, setSelectedProject] = useState(task?.project ?? '');
 
   // Sample data
-  const assignees = ['John Doe', 'Jane Smith', 'Robert Johnson', 'Emily Davis'];
-  const statuses = ['To Do', 'In Progress', 'In Review', 'Completed'];
-  const projects = ['Marketing Campaign', 'Website Redesign', 'Mobile App', 'Product Launch'];
+  // const assignees = ['John Doe', 'Jane Smith', 'Robert Johnson', 'Emily Davis'];
+  let [assignees,setAssignees]=useState([])
+  const statuses = ['Backlog','To Do', 'In Progress', 'In Review', 'Completed'];
+  // const projects = ['Marketing Campaign', 'Website Redesign', 'Mobile App', 'Product Launch'];
+  let [projects,setProjects]=useState([])
 
   const handleClose = () => {
     setIsOpen(false);
@@ -60,11 +65,57 @@ export default function CreateTask({isOpen,setIsOpen}) {
     });
     
     setSelectedDate(formattedDate);
-    setShowCalendar(false);
+    const temp_date=new Date(formattedDate)
+      setShowCalendar(false);
   };
+
+  const handleCreate=()=>{
+    if(!selectedProject || !selectedStatus || !selectedDate || !taskName){
+      toast.error("Enter all fields")
+      return
+    }
+    axios.post("/api/t/create",{
+      title: taskName,due_date: (new Date(selectedDate)), assignee_id: selectedAssignee?.id, project_id: selectedProject?.id, status: selectedStatus
+    },{withCredentials:true})
+    .then(({data})=>{ 
+      setTasks(prev=>[data?.data,...prev])
+      toast.success("Task created successfully")
+      handleClose()
+    })
+  }
+
+  const handleEdit=()=>{
+    axios.patch("/api/t/edit",{
+      id:task?.id,title: taskName,due_date: (new Date(selectedDate)), assignee_id: selectedAssignee?.id, project_id: selectedProject?.id, status: selectedStatus
+    },{withCredentials:true})
+    .then(({data})=>{
+      setTasks(tasks=>tasks.map(task=>{
+        if(task.id==data?.data?.id){
+          return data?.data
+        }
+        return task
+      }))
+      toast.success("Task eddited successfully")
+      handleClose()
+    })
+  }
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const workspace=useSelector(state=>state.workspace?.workspace)
+
+  useEffect(()=>{
+    axios.get(`/api/p/all/${workspace?.id}`,{withCredentials: true})
+    .then( ({data})=>{
+      setProjects(data?.data)
+    } )
+
+    axios.get(`/api/w/members/${workspace?.id}`,{withCredentials:true})
+    .then( ({data})=>{
+      setAssignees(data?.data)
+    } )
+  },[])
 
   return (
     <>
@@ -145,7 +196,7 @@ export default function CreateTask({isOpen,setIsOpen}) {
                       onClick={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
                     >
                       <span className={selectedAssignee ? 'text-gray-800' : 'text-gray-500'}>
-                        {selectedAssignee || 'Select assignee'}
+                        {selectedAssignee?.name || 'Select assignee'}
                       </span>
                       <ChevronDown size={16} className="text-gray-400" />
                     </div>
@@ -154,15 +205,15 @@ export default function CreateTask({isOpen,setIsOpen}) {
                       <div className="absolute mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 w-full">
                         {assignees.map(assignee => (
                           <div 
-                            key={assignee} 
+                            key={assignee.id} 
                             className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
                             onClick={() => {
                               setSelectedAssignee(assignee);
                               setShowAssigneeDropdown(false);
                             }}
                           >
-                            <span>{assignee}</span>
-                            {selectedAssignee === assignee && <Check size={16} className="text-blue-500" />}
+                            <span>{assignee.name}</span>
+                            {selectedAssignee.name === assignee.name && <Check size={16} className="text-blue-500" />}
                           </div>
                         ))}
                       </div>
@@ -211,7 +262,7 @@ export default function CreateTask({isOpen,setIsOpen}) {
                       onClick={() => setShowProjectDropdown(!showProjectDropdown)}
                     >
                       <span className={selectedProject ? 'text-gray-800' : 'text-gray-500'}>
-                        {selectedProject || 'Select project'}
+                        {selectedProject?.name || 'Select project'}
                       </span>
                       <ChevronDown size={16} className="text-gray-400" />
                     </div>
@@ -220,15 +271,15 @@ export default function CreateTask({isOpen,setIsOpen}) {
                       <div className="absolute mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 w-full">
                         {projects.map(project => (
                           <div 
-                            key={project} 
+                            key={project.id} 
                             className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
                             onClick={() => {
                               setSelectedProject(project);
                               setShowProjectDropdown(false);
                             }}
                           >
-                            <span>{project}</span>
-                            {selectedProject === project && <Check size={16} className="text-blue-500" />}
+                            <span>{project.name}</span>
+                            {selectedProject?.name === project.name && <Check size={16} className="text-blue-500" />}
                           </div>
                         ))}
                       </div>
@@ -245,10 +296,10 @@ export default function CreateTask({isOpen,setIsOpen}) {
               >
                 Cancel
               </button>
-              <button 
+              <button onClick={!task?.title?handleCreate:handleEdit}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
               >
-                {task?.name?"Edit":"Create"}
+                {task?.title?"Edit":"Create"}
               </button>
             </div>
           </div>

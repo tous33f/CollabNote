@@ -1,10 +1,13 @@
+import { useParams } from "react-router";
 import Header from "../Components/Header";
 import Stats from "../Components/Stats";
-import MyTasks from "../Components/TasksViewer";
+import TasksViewer from "../Components/TasksViewer";
 
 export default function Project() {
-  return (
 
+  const {project_id}=useParams()
+
+  return (
       <div className="flex-1 p-6 flex flex-col gap-6">
         <Header title="Home" description="Monitor all of your projects and tasks here" />
 
@@ -24,7 +27,7 @@ export default function Project() {
         <Stats />
 
         {/* Tasks  */}
-        <MyTasks />
+        <TasksViewer project_id={project_id} />
 
       </div>
     )

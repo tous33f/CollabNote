@@ -1,0 +1,79 @@
+erDiagram
+
+    users {
+        UUID id PK
+        VARCHAR name
+        VARCHAR email
+        TEXT password_hash
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    workspaces {
+        UUID id PK
+        VARCHAR name
+        UUID owner_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    workspace_members {
+        UUID user_id PK, FK
+        UUID workspace_id PK, FK
+        ENUM role
+        TIMESTAMP joined_at
+    }
+
+    projects {
+        UUID id PK
+        VARCHAR name
+        TEXT description
+        UUID workspace_id FK
+        UUID created_by FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    tasks {
+        UUID id PK
+        VARCHAR title
+        TEXT description
+        ENUM status
+        ENUM priority
+        DATE due_date
+        UUID project_id FK
+        UUID assignee_id FK
+        UUID created_by FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    tags {
+        UUID id PK
+        VARCHAR name
+        VARCHAR color
+    }
+
+    task_tags {
+        UUID task_id PK, FK
+        UUID tag_id PK, FK
+    }
+
+    task_comments {
+        UUID id PK
+        UUID task_id FK
+        UUID user_id FK
+        TEXT comment
+        TIMESTAMP created_at
+    }
+
+    users ||--o{ workspace_members : "member of"
+    workspaces ||--o{ workspace_members : "has members"
+    users ||--o{ workspaces : "owns"
+    workspaces ||--o{ projects : "contains"
+    projects ||--o{ tasks : "has"
+    users ||--o{ tasks : "assigned to"
+    users ||--o{ task_comments : "writes"
+    tasks ||--o{ task_comments : "has"
+    tasks ||--o{ task_tags : "tagged with"
+    tags ||--o{ task_tags : "applied to"

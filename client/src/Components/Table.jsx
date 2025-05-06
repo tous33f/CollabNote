@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 export default function Table({tasks,toggleTaskMenu,handleEditTask,handleDeleteTask,taskMenuRef,openTaskMenu,getStatusColor }) {
+  useEffect(()=>{},[tasks])
   return (
     <div>
-        <div className="mt-4 border border-gray-200 rounded-md overflow-hidden bg-white">
+        <div className="z-10 overflow-visible mt-4 border border-gray-200 rounded-md bg-white">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -132,14 +133,14 @@ export default function Table({tasks,toggleTaskMenu,handleEditTask,handleDeleteT
                     <input type="checkbox" className="h-4 w-4 rounded border-gray-300" />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{task.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{task.title}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div
-                        className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs font-medium ${task.project.code === "M" ? "bg-blue-600" : "bg-indigo-900"}`}
+                        className={`w-6 h-6 rounded flex items-center justify-center text-white text-xs font-medium ${"bg-blue-600"}`}
                       >
-                        {task.project.code}
+                        {task?.project?.name[0]?task?.project?.name[0]:'A'}
                       </div>
                       <div className="ml-2 text-sm text-gray-900">{task.project.name}</div>
                     </div>
@@ -147,13 +148,20 @@ export default function Table({tasks,toggleTaskMenu,handleEditTask,handleDeleteT
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs">
-                        {task.assignee.initial}
+                        {task?.assignee?.name?task?.assignee?.name[0]:'N'}
                       </div>
-                      <div className="ml-2 text-sm text-gray-900">{task.assignee.name}</div>
+                      <div className="ml-2 text-sm text-gray-900">{task?.assignee?.name?task.assignee.name:"No Assignee"}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-yellow-500">{task.dueDate}</div>
+                    <div className="text-sm text-yellow-500">
+                      { (new Date(task?.due_date)
+                    .toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                    ) }</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span
@@ -176,8 +184,8 @@ export default function Table({tasks,toggleTaskMenu,handleEditTask,handleDeleteT
                       </svg>
                     </button>
                     {openTaskMenu === task.id && (
-                      <div className="absolute right-0 z-10 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200">
-                        <ul className="py-1">
+                      <div className="absolute z-50 right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200">
+                        <ul className="py-1 z-50">
                           <li
                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-700 flex items-center gap-2"
                             onClick={() => handleEditTask(task)}

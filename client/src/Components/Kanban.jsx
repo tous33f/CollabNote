@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react"
 import { DndProvider, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
+import axios from "axios"
+import { toast } from "react-toastify"
 
 // Task Card Component
 const TaskCard = ({ task, index, moveTask, status }) => {
   const [{ isDragging }, drag] = useDrag({
     type: "TASK",
-    item: { id: task.id, index, status },
+    item: { id: task.id,project_id:task?.project?.id, index, status },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -21,7 +23,7 @@ const TaskCard = ({ task, index, moveTask, status }) => {
       }`}
     >
       <div className="flex justify-between items-start mb-2">
-        <div className="text-sm font-medium">{task.name}</div>
+        <div className="text-sm font-medium">{task?.title}</div>
         <button className="text-gray-400 hover:text-gray-500">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z" />
@@ -33,16 +35,22 @@ const TaskCard = ({ task, index, moveTask, status }) => {
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center">
           <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs mr-2">
-            {task.assignee.initial}
+            {task?.assignee?.name?task?.assignee?.name[0]:'N'}
           </div>
-          <div className="text-xs text-yellow-500">{task.dueDate.split(",")[0]}</div>
+          <div className="text-xs text-yellow-500">{(new Date(task?.due_date)
+          .toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })
+          )}</div>
         </div>
         <div
           className={`w-5 h-5 rounded flex items-center justify-center text-white text-xs font-medium ${
-            task.project.code === "M" ? "bg-blue-600" : "bg-indigo-900"
+            "bg-blue-600"
           }`}
         >
-          {task.project.code}
+          {task?.project?.name?task?.project?.name[0]:'P'}
         </div>
       </div>
     </div>
@@ -55,7 +63,7 @@ const Column = ({ status, tasks, moveTask }) => {
     accept: "TASK",
     drop: (item) => {
       if (item.status !== status) {
-        moveTask(item.id, status)
+        moveTask(item.id,item.project_id, status)
       }
     },
     collect: (monitor) => ({
@@ -193,7 +201,7 @@ const Kanban = ({ tasks, setTasks }) => {
   }, [tasks])
 
   // Move task between columns
-  const moveTask = (id, newStatus) => {
+  const moveTask = (id,project_id, newStatus) => {
     const updatedTasks = tasks.map((task) => {
       if (task.id === id) {
         return { ...task, status: newStatus }
@@ -201,7 +209,13 @@ const Kanban = ({ tasks, setTasks }) => {
       return task
     })
 
+    axios.patch("/api/t/edit",{
+      id,project_id, status: newStatus
+    },{withCredentials:true})
+    .catch(()=>setTasks(tasks))
+
     setTasks(updatedTasks)
+
   }
 
   return (

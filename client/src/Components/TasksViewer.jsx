@@ -4,8 +4,11 @@ import { useState, useRef, useEffect } from "react"
 import Table from "./Table"
 import Kanban from "./Kanban"
 import CreateTask from "./CreateTask"
+import axios from "axios"
+import { useSelector } from "react-redux"
+import { toast } from "react-toastify"
 
-export default function TasksViewer() {
+export default function TasksViewer({project_id}) {
   const [activeTab, setActiveTab] = useState("Table")
   const [openDropdown, setOpenDropdown] = useState(null)
   const [openTaskMenu, setOpenTaskMenu] = useState(null)
@@ -13,6 +16,8 @@ export default function TasksViewer() {
 
   const dropdownRef = useRef(null)
   const taskMenuRef = useRef(null)
+
+  const workspace=useSelector(state=>state.workspace?.workspace)
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -26,6 +31,21 @@ export default function TasksViewer() {
     }
 
     document.addEventListener("mousedown", handleClickOutside)
+
+    if(project_id){
+      axios.get(`/api/t/project/${project_id}`,{withCredentials: true})
+      .then( ({data})=>{
+        setTasks(data?.data)
+        console.log(data?.data)
+      } )
+    }
+    else{
+      axios.get(`/api/t/workspace/${workspace?.id}`,{withCredentials: true})
+      .then( ({data})=>{
+        setTasks(data?.data)
+      } )
+    }
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
@@ -38,120 +58,7 @@ export default function TasksViewer() {
   const dueDateOptions = ["All", "Today", "This Week", "This Month", "Overdue"]
 
   // Task data
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      name: "Optimize images",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 5th, 2024",
-      status: "Backlog",
-    },
-    {
-      id: 2,
-      name: "Integrate push notifications",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "J", name: "John" },
-      dueDate: "October 13th, 2024",
-      status: "Backlog",
-    },
-    {
-      id: 3,
-      name: "Conduct usability testing",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "J", name: "John" },
-      dueDate: "October 15th, 2024",
-      status: "Backlog",
-    },
-    {
-      id: 4,
-      name: "Implement responsive layout",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 4th, 2024",
-      status: "Todo",
-    },
-    {
-      id: 5,
-      name: "Integrate CMS",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 6th, 2024",
-      status: "Todo",
-    },
-    {
-      id: 6,
-      name: "Implement navigation flow",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "J", name: "John" },
-      dueDate: "October 11th, 2024",
-      status: "Todo",
-    },
-    {
-      id: 7,
-      name: "Implement offline mode",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 14th, 2024",
-      status: "Todo",
-    },
-    {
-      id: 8,
-      name: "Design new homepage",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 3rd, 2024",
-      status: "In Progress",
-    },
-    {
-      id: 9,
-      name: "Implement user authentication",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "J", name: "John" },
-      dueDate: "October 7th, 2024",
-      status: "In Progress",
-    },
-    {
-      id: 10,
-      name: "Design UI components",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 10th, 2024",
-      status: "In Progress",
-    },
-    {
-      id: 11,
-      name: "Write content for main pages",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 8th, 2024",
-      status: "In Review",
-    },
-    {
-      id: 12,
-      name: "Develop login screen",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 12th, 2024",
-      status: "In Review",
-    },
-    {
-      id: 13,
-      name: "Create sitemap",
-      project: { code: "W", name: "Website Redesign" },
-      assignee: { initial: "A", name: "Antonio" },
-      dueDate: "October 2nd, 2024",
-      status: "Done",
-    },
-    {
-      id: 14,
-      name: "Create app wireframes",
-      project: { code: "M", name: "Mobile App Development" },
-      assignee: { initial: "J", name: "John" },
-      dueDate: "October 9th, 2024",
-      status: "Done",
-    },
-  ])
+  const [tasks, setTasks] = useState([])
 
   // Get status badge color
   const getStatusColor = (status) => {
@@ -199,14 +106,19 @@ export default function TasksViewer() {
   // Handle delete task
   const handleDeleteTask = (taskId) => {
     console.log(`Delete task ${taskId}`)
+    axios.delete(`/api/t/${taskId}`,{withCredentials:true})
+    .then(()=>{
+      setTasks(prev=>prev.filter(task=>task.id!=taskId))
+      toast.success("Task deleted successfully")
+    })
     setOpenTaskMenu(null)
   }
 
   return (
-    <div className=" w-full" >
+    <div className=" w-full z-10" >
 
       {/* Task creation form  */}
-      {isOpen && <CreateTask isOpen={isOpen} setIsOpen={setIsOpen} />}
+      {isOpen && <CreateTask isOpen={isOpen} setTasks={setTasks} setIsOpen={setIsOpen} />}
 
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">
