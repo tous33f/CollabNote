@@ -1,7 +1,13 @@
 import React from 'react'
 import { useState,useRef,useEffect } from 'react'
+import { useSelector } from 'react-redux'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 
 function WorkspaceMembers() {
+
+    let workspace=useSelector(state=>state.workspace?.workspace)
+    let user=useSelector(state=>state.user?.user)
 
     const [openDropdownId, setOpenDropdownId] = useState(null)
     const dropdownRef = useRef(null)
@@ -38,7 +44,7 @@ function WorkspaceMembers() {
           avatar: "M",
           joined: "2 weeks ago",
         },
-      ])
+    ])
 
     // Copy invite link to clipboard
   const copyInviteLink = () => {
@@ -57,16 +63,28 @@ function WorkspaceMembers() {
 
   // Change member role
   const changeMemberRole = (memberId, newRole) => {
-    setMembers(
-      members.map((member) => {
-        if (member.id === memberId) {
-          return { ...member, role: newRole }
-        }
-        return member
-      }),
-    )
-    setOpenDropdownId(null)
-    alert(`Member role has been updated to ${newRole}.`)
+    console.log("hh")
+    if(workspace){
+      axios.patch(`/api/w/members/${workspace.id}`,{user_id:memberId,role: newRole},{withCredentials: true})
+      .then( ({data})=>{
+        setMembers(
+          members.map((member) => {
+            if (member.id === memberId) {
+              return { ...member, role: newRole }
+            }
+            return member
+          }),
+        )
+        toast.success("Role updated successfully")
+        setOpenDropdownId(null)
+      } )
+      .catch( (err)=>{
+        const {response}=err
+        const {data}=response
+        const {message}=data
+        toast.error(message)
+      } )
+    }
   }
 
   // Remove member
@@ -85,6 +103,24 @@ function WorkspaceMembers() {
     }
 
     document.addEventListener("mousedown", handleClickOutside)
+
+    if(workspace){
+      axios.get(`/api/w/members/${workspace.id}`,{withCredentials: true})
+      .then( ({data})=>{
+        if(Array.isArray(data?.data)){
+          setMembers(data?.data.filter(member=>{
+            return member.id!=user.id
+          }))
+        }
+      } )
+      .catch( (err)=>{
+        const {response}=err
+        const {data}=response
+        const {message}=data
+        toast.error(message)
+      } )
+    }
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
@@ -119,7 +155,7 @@ function WorkspaceMembers() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700">
-                          {member.avatar}
+                          {member?.name[0]}
                         </div>
                         <span className="font-medium">{member.name}</span>
                       </div>
@@ -136,7 +172,13 @@ function WorkspaceMembers() {
                         {member.role}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{member.joined}</td>
+                    <td className="py-3 px-4 text-gray-600">{ (new Date(member?.createdAt)
+                    .toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                    ) }</td>
                     <td className="py-3 px-4 text-right relative" ref={dropdownRef}>
                       <button
                         className="p-1 rounded-full hover:bg-gray-100"
@@ -163,20 +205,20 @@ function WorkspaceMembers() {
                       {openDropdownId === member.id && (
                         <div className="fixed right-0 z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200">
                           <div className="py-1">
-                            {member.role !== "Admin" && (
+                            {member.role !== "admin" && (
                               <button
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => changeMemberRole(member.id, "Admin")}
+                                onClick={() => changeMemberRole(member.id, "admin")}
                               >
                                 Make Admin
                               </button>
                             )}
-                            {member.role !== "Developer" && (
+                            {member.role !== "member" && (
                               <button
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => changeMemberRole(member.id, "Developer")}
+                                onClick={() => changeMemberRole(member.id, "member")}
                               >
-                                Make Developer
+                                Make Member
                               </button>
                             )}
                             <div className="border-t border-gray-100 my-1"></div>

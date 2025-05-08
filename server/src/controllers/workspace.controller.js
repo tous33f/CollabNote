@@ -124,15 +124,70 @@ const workspaceMembers=asyncHandler(async(req,res)=>{
         include:{
             user:{
                 select:{
+                    id:true,
                     name: true,
-                    id: true,
-                    email: true
+                    email: true,
+                    createdAt:true
                 }
             }
         }
     })
     res.status(201).json(
-        new ApiResponse(201,"Members fetched successfully",members.map(member=>member?.user))
+        new ApiResponse(201,"Members fetched successfully",members.map(member=>{
+            return {...member?.user,role:member?.role}
+        }))
+    )
+})
+
+const updateMemberRole=asyncHandler(async(req,res)=>{
+    let {workspace_id}=req.params
+    let {user_id,role}=req.body
+    const {id}=req?.user?.id
+    workspace_id=parseInt(workspace_id)
+    user_id=parseInt(user_id)
+    if(!workspace_id || !user_id || !role){
+        throw new ApiError(401,"Workspace id,user id and updated role is required")
+    }
+    let user,workspace
+    user=await prisma.user.findUnique({where:{id: user_id}})
+    if(!user){
+        throw new ApiError(401,"User does not exist")
+    }
+    workspace=await prisma.workspace.findUnique({where:{id: workspace_id}})
+    if(!workspace){
+        throw new ApiError(401,"Workspace does not exist")
+    }
+    let is_member=await prisma.workspace_Members.findUnique({where:{user_id_workspace_id:{user_id,workspace_id}}})
+    if(!is_member){
+        throw new ApiError(201,"User is already not member of the workspace")
+    }
+    // check if the tne updating is an admin
+    // user=await prisma.workspace_Members.findUnique({where:{user_id_workspace_id:{user_id:id,workspace_id}}})
+    // if(!user){
+    //     throw new ApiError(401,"User does not exist")
+    // }
+    // else if(user.role!="admin"){
+    //     throw new ApiError(401,"You do not have privelige to change any members role")
+    // }
+    user=await prisma.workspace_Members.update({
+        where:{
+            user_id_workspace_id:{
+                user_id,workspace_id
+            }
+        },
+        data:{
+            role
+        },
+        include:{
+            user:{
+                select:{
+                    id:true,name:true,email:true,createdAt:true
+                }
+            }
+        }
+    })
+    res.status(201).json(
+        new ApiResponse(201,"User removed of the workspace",{...user?.user,role:user.role})
     )
 })
 
@@ -140,5 +195,7 @@ export {
     createWorkspace,
     getWorkspace,
     joinWorkspace,
-    workspaceMembers
+    workspaceMembers,
+    removeFromWorkspace,
+    updateMemberRole
 }
