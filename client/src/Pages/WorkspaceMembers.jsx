@@ -6,92 +6,56 @@ import { toast } from 'react-toastify'
 
 function WorkspaceMembers() {
 
-    let workspace=useSelector(state=>state.workspace?.workspace)
-    let user=useSelector(state=>state.user?.user)
+  let workspace=useSelector(state=>state.workspace?.workspace)
+  let user=useSelector(state=>state.user?.user)
 
-    const [openDropdownId, setOpenDropdownId] = useState(null)
-    const dropdownRef = useRef(null)
-    const [members, setMembers] = useState([
-        {
-          id: 1,
-          name: "Antonio Rodriguez",
-          email: "antonio@example.com",
-          role: "Admin",
-          avatar: "A",
-          joined: "2 months ago",
-        },
-        {
-          id: 2,
-          name: "John Smith",
-          email: "john@example.com",
-          role: "Developer",
-          avatar: "J",
-          joined: "1 month ago",
-        },
-        {
-          id: 3,
-          name: "Sarah Johnson",
-          email: "sarah@example.com",
-          role: "Developer",
-          avatar: "S",
-          joined: "3 weeks ago",
-        },
-        {
-          id: 4,
-          name: "Michael Brown",
-          email: "michael@example.com",
-          role: "Developer",
-          avatar: "M",
-          joined: "2 weeks ago",
-        },
-    ])
-
-    // Copy invite link to clipboard
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink)
-    alert("Invite link copied to clipboard!")
-  }
-
-  // Toggle dropdown menu
-  const toggleDropdown = (memberId) => {
-    if (openDropdownId === memberId) {
-      setOpenDropdownId(null)
-    } else {
-      setOpenDropdownId(memberId)
-    }
-  }
+  const [openDropdownId, setOpenDropdownId] = useState(null)
+  const dropdownRef = useRef(null)
+  const [members, setMembers] = useState([])
 
   // Change member role
   const changeMemberRole = (memberId, newRole) => {
-    console.log("hh")
-    if(workspace){
-      axios.patch(`/api/w/members/${workspace.id}`,{user_id:memberId,role: newRole},{withCredentials: true})
-      .then( ({data})=>{
-        setMembers(
-          members.map((member) => {
-            if (member.id === memberId) {
-              return { ...member, role: newRole }
-            }
-            return member
-          }),
-        )
-        toast.success("Role updated successfully")
-        setOpenDropdownId(null)
-      } )
-      .catch( (err)=>{
-        const {response}=err
-        const {data}=response
-        const {message}=data
-        toast.error(message)
-      } )
+    if(!workspace){
+      return
     }
+    axios.patch(`/api/w/members/update/${workspace.id}`,{user_id:memberId,role: newRole},{withCredentials: true})
+    .then( ({data})=>{
+      setMembers(
+        members.map((member) => {
+          if (member.id === memberId) {
+            return { ...member, role: newRole }
+          }
+          return member
+        }),
+      )
+      toast.success("Role updated successfully")
+      setOpenDropdownId(null)
+    } )
+    .catch( (err)=>{
+      const {response}=err
+      const {data}=response
+      const {message}=data
+      toast.error(message)
+    } )
   }
 
   // Remove member
   const removeMember = (memberId) => {
-    setMembers(members.filter((member) => member.id !== memberId))
-    setOpenDropdownId(null)
-    alert("Member has been removed from the workspace.")
+    if(!workspace){
+      return
+    }
+    axios.delete(`/api/w/members/remove/${workspace.id}`,{user_id:memberId},{withCredentials: true})
+    .then( ({data})=>{
+      setMembers(members.filter((member) => member.id !== memberId))
+      toast.success("User removed successfully")
+      setOpenDropdownId(null)
+    } )
+    .catch( (err)=>{
+      const {response}=err
+      const {data}=response
+      const {message}=data
+      toast.error(message)
+    } )
   }
 
   // Close dropdown when clicking outside
@@ -133,9 +97,6 @@ function WorkspaceMembers() {
             <h2 className="text-2xl font-semibold">Workspace Members</h2>
             <p className='text-sm text-gray-500' >Manage your workspace members</p>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-              Invite New Member
-            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -179,10 +140,10 @@ function WorkspaceMembers() {
                       day: 'numeric'
                     })
                     ) }</td>
-                    <td className="py-3 px-4 text-right relative" ref={dropdownRef}>
+                    {/* <td className="py-3 px-4 text-right relative" ref={dropdownRef}> */}
                       <button
-                        className="p-1 rounded-full hover:bg-gray-100"
-                        onClick={() => toggleDropdown(prev=>{
+                        className="my-2 py-3 px-4 rounded-full hover:bg-gray-100"
+                        onClick={() => setOpenDropdownId(prev=>{
                             if(prev){
                                 return null
                             }
@@ -203,12 +164,12 @@ function WorkspaceMembers() {
                         </svg>
                       </button>
                       {openDropdownId === member.id && (
-                        <div className="fixed right-0 z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200">
+                        <div className="absolute right-0 z-50 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200">
                           <div className="py-1">
                             {member.role !== "admin" && (
                               <button
+                              onClick={()=>changeMemberRole(member.id, "admin")}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => changeMemberRole(member.id, "admin")}
                               >
                                 Make Admin
                               </button>
@@ -231,7 +192,7 @@ function WorkspaceMembers() {
                           </div>
                         </div>
                       )}
-                    </td>
+                    {/* </td> */}
                   </tr>
                 ))}
               </tbody>

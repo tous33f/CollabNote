@@ -70,8 +70,10 @@ const joinWorkspace=asyncHandler(async(req,res)=>{
 })
 
 const removeFromWorkspace=asyncHandler(async(req,res)=>{
-    const {workspace_id}=req.params
-    const {user_id}=req.body
+    let {workspace_id}=req.params
+    let {user_id}=req.body
+    workspace_id=parseInt(workspace_id)
+    user_id=parseInt(user_id)
     const {id}=req?.user?.id
     if(!workspace_id || !user_id){
         throw new ApiError(401,"Workspace id and user id is required")
@@ -85,10 +87,18 @@ const removeFromWorkspace=asyncHandler(async(req,res)=>{
     if(!workspace){
         throw new ApiError(401,"Workspace does not exist")
     }
-    let is_member=await prisma.workspace_Members.findUnique({where:{user_id,workspace_id}})
+    let is_member=await prisma.workspace_Members.findUnique({where:{user_id_workspace_id:{user_id,workspace_id}}})
     if(!is_member){
         throw new ApiError(201,"User is already not member of the workspace")
     }
+    // check if the tne updating is an admin
+    // user=await prisma.workspace_Members.findUnique({where:{user_id_workspace_id:{user_id:id,workspace_id}}})
+    // if(!user){
+    //     throw new ApiError(401,"User does not exist")
+    // }
+    // else if(user.role!="admin"){
+    //     throw new ApiError(401,"You do not have privelige to change any members role")
+    // }
     await prisma.task.updateMany({
         where:{
             assignee_id: user_id,
